@@ -3,75 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Noor Finance | Live Halal Screener</title>
+    <title>Noor Finance | Terminal</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background-color: #2a2a2a; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 100%; max-width: 400px; border-top: 4px solid #d4af37; }
-        h1 { color: #d4af37; text-align: center; margin-bottom: 5px; }
-        p.subtitle { text-align: center; font-size: 0.9em; color: #a0a0a0; margin-bottom: 20px; }
-        label { display: block; margin-top: 15px; font-weight: bold; color: #e0e0e0; }
-        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #444; border-radius: 5px; background-color: #333; color: white; box-sizing: border-box; text-transform: uppercase; }
-        button { width: 100%; padding: 12px; margin-top: 20px; background-color: #d4af37; color: #1a1a1a; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background-color: #b5952f; }
-        #result { margin-top: 20px; padding: 15px; border-radius: 5px; text-align: center; display: none; }
-        .halal { background-color: #2e4a2e; color: #90ee90; border: 1px solid #90ee90; }
-        .haram { background-color: #4a2e2e; color: #ffcccb; border: 1px solid #ffcccb; }
-        .error { background-color: #4a3e2e; color: #ffebcc; border: 1px solid #ffebcc; }
-        .data-row { display: flex; justify-content: space-between; font-size: 0.85em; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 5px; }
+        body { 
+            font-family: 'Consolas', 'Courier New', monospace; 
+            background-color: #050505; 
+            color: #d4af37; 
+            margin: 0; 
+            padding: 40px; 
+        }
+        .header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        h1 { margin: 0; font-size: 24px; letter-spacing: 2px; }
+        .system-status { font-size: 12px; color: #00ff00; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #e0e0e0;
+        }
+        th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #444;
+            color: #888;
+            font-weight: normal;
+            font-size: 14px;
+        }
+        td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #1a1a1a;
+            font-size: 16px;
+        }
+        .ticker { font-weight: bold; color: #fff; }
+        
+        /* Terminal Colors */
+        .halal { color: #00ff00; font-weight: bold; }
+        .haram { color: #ff0000; font-weight: bold; }
+        .error { color: #ff9900; }
+        
+        #loader {
+            color: #d4af37;
+            text-align: center;
+            margin-top: 50px;
+            font-size: 18px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Noor Finance</h1>
-        <p class="subtitle">Live Islamic Market Screener</p>
-        
-        <label>Enter Stock Ticker (e.g. AAPL, TSLA, MSFT)</label>
-        <input type="text" id="ticker" placeholder="Ticker Symbol">
-        
-        <button onclick="checkLiveCompliance()">Fetch Live Data & Analyze</button>
-        
-        <div id="result"></div>
+
+    <div class="header">
+        <h1>NOOR FINANCE // TERMINAL</h1>
+        <div class="system-status">SYS: ONLINE // FETCHING LIVE DATA</div>
     </div>
 
+    <div id="loader">CONNECTING TO MARKET DATA...</div>
+
+    <table id="dashboard" style="display:none;">
+        <thead>
+            <tr>
+                <th>TICKER</th>
+                <th>LAST PRICE</th>
+                <th>MARKET CAP</th>
+                <th>DEBT/EQUITY</th>
+                <th>SHARIA COMPLIANCE</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+    </table>
+
     <script>
-        async function checkLiveCompliance() {
-            const ticker = document.getElementById('ticker').value;
-            const resultDiv = document.getElementById('result');
-            
-            if(!ticker) return;
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = ''; // Clear loading text
+                
+                data.forEach(stock => {
+                    const row = `<tr>
+                        <td class="ticker">${stock.ticker}</td>
+                        <td>${stock.price}</td>
+                        <td>${stock.market_cap}</td>
+                        <td>${stock.debt_ratio}</td>
+                        <td class="${stock.status_class}">${stock.status}</td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+                
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'table';
+                document.querySelector('.system-status').innerText = 'SYS: ONLINE // DATA SYNCED';
 
-            resultDiv.style.display = 'block';
-            resultDiv.className = '';
-            resultDiv.innerHTML = 'Fetching live market data...';
-
-            const response = await fetch('/screen', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticker: ticker })
-            });
-
-            const data = await response.json();
-            
-            if(data.error) {
-                resultDiv.className = 'error';
-                resultDiv.innerHTML = data.error;
-                return;
-            }
-            
-            let htmlContent = `<strong>${data.company} (${data.ticker})</strong><br>
-                               <span style="font-size:1.2em; font-weight:bold; display:block; margin: 10px 0;">${data.status}</span>
-                               <span style="font-size:0.85em;">${data.message}</span>
-                               <div class="data-row"><span>Market Cap:</span> <span>${data.market_cap}</span></div>
-                               <div class="data-row"><span>Total Debt:</span> <span>${data.total_debt}</span></div>`;
-            
-            resultDiv.innerHTML = htmlContent;
-            
-            if (data.status.includes('Halal')) {
-                resultDiv.className = 'halal';
-            } else {
-                resultDiv.className = 'haram';
+            } catch (error) {
+                document.getElementById('loader').innerText = 'SYS ERROR: UNABLE TO CONNECT TO EXCHANGE';
+                document.getElementById('loader').style.color = '#ff0000';
             }
         }
+
+        // Load data immediately when page opens
+        window.onload = loadDashboard;
     </script>
+
 </body>
 </html>
